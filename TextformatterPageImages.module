@@ -1,0 +1,102 @@
+<?php
+
+/**
+ * ProcessWire TextformatterPageImages 
+ *
+ * derivation of module TextformatterImageTags made by Diogo.
+ * customized by Christoph Thelen 2013
+ *
+ * changelog
+ * 03.09.2015 basic class and wrapper configuration added
+ * 24.10.2015 hookable function wrapper() added
+ *
+ */
+
+class TextformatterPageImages extends Textformatter implements ConfigurableModule {
+
+	public static function getModuleInfo() {
+		return array(
+			'title' => 'Image Tags', 
+			'version' => 103, 
+			'author' => 'Diogo, Christoph Thelen',
+			'summary' => "Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class]]. All Parameters are optional.",
+			'href' => 'http://processwire.com/talk/topic/1182-module-image-tags/?p=57160',
+		); 
+	}
+
+	static public function getDefaultConfig() {
+		return array(
+			'class' => 'ImageTags',
+			'wrapper' => null
+		);
+	}
+
+	public function __construct() {
+		foreach(self::getDefaultConfig() as $key => $value) {
+			$this->$key = $value;
+		}
+	}
+
+	public function ___wrapper(Pageimage $picture) { // argument set for hooks, get the class if set by property $picture->class_attr
+   		$wrapper = array('','');
+   		if ($this->wrapper && substr_count($this->wrapper,'*') == 1) $wrapper = explode('*',$this->wrapper);
+   		return $wrapper;
+	}
+
+	public function formatValue(Page $page, Field $field, &$str) {
+		if(!$page->fields->get('type=FieldtypeImage')) return;
+		if(strpos($str, '[[') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
+		if(preg_match_all("/\[\[([A-Za-z_]*)?(,)?([\d]*)?(,)?([\w _-]*)?\]\]/", $str, $a, PREG_SET_ORDER)) $pageImages = new Pageimages($page);
+		foreach($a as $m) {
+			$m = array_pad($m,6,null);
+	   		$f = $m[1]?$m[1]:$page->fields->get('type=FieldtypeImage')->name;
+	   		$picture = $page->$f instanceof Pageimages?$page->get($f)->eq($m[3]?$m[3]-1:0):0;
+	   		if (!$picture || !$picture instanceof Pageimage) {
+	   			$str = str_replace($m[0], "", $str); // no output if picture doesn't exists
+	   			continue;
+	   		}
+	   		else {
+	   			$picture->set('id',$m[3]);
+	   			if ($m[5]) {
+	   				$class = $m[5];
+	   				$picture->set('class_attr',$class);
+	   			}
+	   			else $class = '';
+   				$wrapper = $this->wrapper($picture);
+	   			$str = str_replace($m[0], $wrapper[0]."<img class=\"".trim($this->class).$class."\" src=\"$picture->url\" alt=\"$picture->description\"/>".$wrapper[1], $str);
+	   			$pageImages->add($picture);
+	   		}
+	   	}
+	}
+
+	/**
+	 * module settings
+	 *
+	 */
+	static public function getModuleConfigInputfields(array $data) {
+
+		$fields = new InputfieldWrapper();
+		$defaults = self::getDefaultConfig();
+		$data = array_merge($defaults, $data);
+
+		$f = wire('modules')->get('InputfieldText'); 
+		$f->attr('name', 'class');
+		$f->attr('pattern', '[A-Za-z0-9 _-]*');
+		$f->attr('title', 'Allowed types: A-Z, a-z, 0-9, dash and underscore');
+		$f->label = __('Basic Class (CSS)'); 
+		$f->description = __('This class is added to each image tag.'); 
+		$f->notes = __('Separate multiple classes by space'); 
+		$f->value = $data['class'];
+		$fields->add($f);
+
+		$f = wire('modules')->get('InputfieldText'); 
+		$f->attr('name', 'wrapper');
+		$f->label = __('Wrapper'); 
+		$f->description = __('Markup to wrap around the image tag. Use Asterisk as placeholder for the image tag. Function wrapper() is hookable. Argument is Instance of Pageimage. Return array([0] => before_image_tag, [1] => after_image_tag)'); 
+		$f->notes = __('Example: <div>*<hr/></div>'); 
+		$f->value = $data['wrapper'];
+		$fields->add($f);
+
+		return $fields;
+	}
+}
