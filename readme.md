@@ -22,7 +22,8 @@ Look at the Examples for easy understanding
 * Define markup for wrapper
 
 ## Hooks
-function wrapper() is hookable with instance of 'Pageimage' as argument. The function return an array of 2 elements.  
-     array([0]=>'markup_before_image_tag',[1]=>'markup_after_image_tag')
+function wrapper() is hookable with instance of 'Pageimage' as argument. The function return an array of 2 elements.   
+`array([0]=>'markup_before_image_tag',[1]=>'markup_after_image_tag')`
 
-## Thanks to Diogo for the nice module TextformatterImageTags which is the mother of this module
+## Thanks
+thnaks to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
