@@ -25,5 +25,8 @@ Look at the Examples for easy understanding
 function wrapper() is hookable with instance of <span style="color:blue;">Pageimage</span> as argument. The function return an array of 2 elements.   
 `array([0]=>'markup_before_image_tag',[1]=>'markup_after_image_tag')`
 
+## Compatibility
+works proper together with other textformatters like markdown.
+
 ## Thanks
 thnaks to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
