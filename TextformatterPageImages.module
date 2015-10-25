@@ -18,7 +18,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		return array(
 			'title' => 'Textformatter Page Images', 
 			'version' => 103, 
-			'author' => 'Diogo, Christoph Thelen',
+			'author' => 'diogo kixe',
 			'summary' => "Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class]]. All Parameters are optional. Configurable base class and wrapper.",
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
 		); 
