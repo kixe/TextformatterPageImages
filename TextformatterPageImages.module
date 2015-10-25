@@ -4,7 +4,14 @@
  * ProcessWire TextformatterPageImages 
  *
  * derivation of module TextformatterImageTags made by Diogo.
- * customized by Christoph Thelen 2013
+ * customized by kixe (Christoph Thelen) 2013
+ * Licensed under GNU/GPL v3
+ * 
+ * ProcessWire 2.x 
+ * Copyright (C) 2013 by Ryan Cramer 
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * 
+ * http://processwire.com
  *
  * changelog
  * 03.09.2015 basic class and wrapper configuration added
