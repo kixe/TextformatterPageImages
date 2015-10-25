@@ -1,5 +1,5 @@
-TextformatterPageImages
-=======================
+Textformatter Page Images
+=========================
 
 ## Syntax
 * includes an image-tag in the Textfield by using [[fieldname(optional),number(optional),class(optional)]] 
@@ -29,4 +29,4 @@ function wrapper() is hookable with instance of <span style="color:blue;">Pageim
 works proper together with other textformatters like markdown.
 
 ## Thanks
-thanks to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
+to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
