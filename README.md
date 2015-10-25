@@ -29,4 +29,4 @@ function wrapper() is hookable with instance of <span style="color:blue;">Pageim
 works proper together with other textformatters like markdown.
 
 ## Thanks
-thnaks to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
+thanks to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
