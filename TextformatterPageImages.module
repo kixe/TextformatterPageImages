@@ -7,15 +7,16 @@
  * customized by kixe (Christoph Thelen) 2013
  * Licensed under GNU/GPL v3
  * 
- * ProcessWire 2.x 
+ * for ProcessWire 2.x, 3.x
  * Copyright (C) 2013 by Ryan Cramer 
  * Licensed under GNU/GPL v2, see LICENSE.TXT
  * 
  * http://processwire.com
  *
- * changelog
- * 03.09.2015 basic class and wrapper configuration added
- * 24.10.2015 hookable function wrapper() added
+ * @version 1.0.6
+ * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
+ * @since 1.0.3 hookable function wrapper() added 2015-10-24
+ * @since 1.0.6 fixed issue with checking for array/ single-item 2016-12-07
  *
  */
 
@@ -24,7 +25,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 105, 
+			'version' => 106, 
 			'author' => 'diogo kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class]]. All Parameters are optional. Configurable base class and wrapper."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
@@ -57,9 +58,12 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		foreach($a as $m) {
 			$m = array_pad($m,6,null);
 	   		$f = $m[1]?$m[1]:$page->fields->get('type=FieldtypeImage')->name;
-	   		$picture = $page->$f instanceof Pageimages?$page->get($f)->eq($m[3]?$m[3]-1:0):0;
-	   		if (!$picture || !$picture instanceof Pageimage) {
-	   			$str = str_replace($m[0], "", $str); // no output if picture doesn't exists
+	   		$picture = 0;
+	   		if ($page->$f instanceof Pageimages) $picture = $page->get($f)->eq($m[3]?$m[3]-1:0);
+	   		else if ($page->$f instanceof Pageimage) $picture = $page->get($f);
+	   		if (!$picture) {
+	   			// remove placeholder if picture doesn't exists
+	   			$str = str_replace($m[0], "", $str);
 	   			continue;
 	   		}
 	   		else {
