@@ -13,10 +13,11 @@
  * 
  * http://processwire.com
  *
- * @version 1.0.6
+ * @version 1.0.7
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
  * @since 1.0.6 fixed issue with checking for array/ single-item 2016-12-07
+ * @since 1.0.7 modified html wrapper options, provide urls of resized variants 2019-09-25
  *
  */
 
@@ -25,8 +26,8 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 106, 
-			'author' => 'diogo kixe',
+			'version' => 107, 
+			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class]]. All Parameters are optional. Configurable base class and wrapper."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
 		); 
@@ -34,8 +35,8 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 
 	static public function getDefaultConfig() {
 		return array(
-			'class' => 'page-images',
-			'wrapper' => null
+			'class' => 'textformatter-page-images',
+			'html' => ''
 		);
 	}
 
@@ -45,39 +46,61 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		}
 	}
 
-	public function ___wrapper(Pageimage $picture) { // argument set for hooks, additional properties: (class_attr, id)
-   		$wrapper = array('','');
-   		if ($this->wrapper && substr_count($this->wrapper,'*') == 1) $wrapper = explode('*',$this->wrapper);
-   		return $wrapper;
+	/**
+	 * hookable function returns output markup
+	 * @param Pageimage object with additional properties (iclass, index, urlSmall, urlMedium, urlLarge)
+	 * @return string markup
+	 *
+	 */
+	public function ___wrapper(Pageimage $picture) {
+		return $this->html? $this->html : '<img class="{class}" src="{url}" alt="{description}"/>';
 	}
 
 	public function formatValue(Page $page, Field $field, &$str) {
 		if(!$page->fields->get('type=FieldtypeImage')) return;
 		if(strpos($str, '[[') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
-		if(preg_match_all("/\[\[([A-Za-z_]*)?(,)?([\d]*)?(,)?([\w _-]*)?\]\]/", $str, $a, PREG_SET_ORDER)) $pageImages = new Pageimages($page);
-		foreach($a as $m) {
-			$m = array_pad($m,6,null);
-	   		$f = $m[1]?$m[1]:$page->fields->get('type=FieldtypeImage')->name;
-	   		$picture = 0;
-	   		if ($page->$f instanceof Pageimages) $picture = $page->get($f)->eq($m[3]?$m[3]-1:0);
-	   		else if ($page->$f instanceof Pageimage) $picture = $page->get($f);
-	   		if (!$picture) {
-	   			// remove placeholder if picture doesn't exists
-	   			$str = str_replace($m[0], "", $str);
-	   			continue;
-	   		}
-	   		else {
-	   			$picture->set('id',$m[3]);
-	   			if ($m[5]) {
-	   				$class = $m[5];
-	   				$picture->set('class_attr',$class);
-	   			}
-	   			else $class = '';
-   				$wrapper = $this->wrapper($picture);
-	   			$str = str_replace($m[0], $wrapper[0]."<img class=\"".trim($this->class).$class."\" src=\"$picture->url\" alt=\"$picture->description\"/>".$wrapper[1], $str);
-	   			$pageImages->add($picture);
-	   		}
-	   	}
+		if(preg_match_all("/\[\[([A-Za-z_]*)?(,)?([\d]*)?(,)?([\w _-]*)?\]\]/", $str, $a, PREG_SET_ORDER)) {
+			foreach($a as $m) {
+				$m = array_pad($m,6,null);
+		   		$f = $m[1]?$m[1]:$page->fields->get('type=FieldtypeImage')->name;
+		   		$picture = 0;
+		   		if ($page->$f instanceof Pageimages) $picture = $page->get($f)->eq($m[3]?$m[3]-1:0);
+		   		else if ($page->$f instanceof Pageimage) $picture = $page->get($f);
+		   		if (!$picture) {
+		   			// remove placeholder if picture doesn't exists
+		   			$str = str_replace($m[0], "", $str);
+		   			continue;
+		   		}
+		   		else {
+		   			$picture->set('index',$m[3]? $m[3]-1 : 0);
+		   			$class = $m[5]? $m[5] : '';
+		   			$picture->set('class', trim("$this->class $class"));
+
+		   			if (!$picture->small || $picture->small instanceof Pageimage == false) {
+		   				$small = $picture->width(400);
+		   				$picture->set('urlSmall', $small->url);
+		   				$picture->set('urlThumb', $small->url);
+		   			}
+
+		   			if (!$picture->medium || $picture->medium instanceof Pageimage == false) {
+		   				$medium = $picture->width(800);
+		   				$picture->set('urlMedium', $medium->url);
+		   			}
+
+		   			if (!$picture->large || $picture->large instanceof Pageimage == false) {
+		   				$large = $picture->width(1200);
+		   				$picture->set('urlLarge', $large->url);
+		   			}
+
+		   			// error if wrapper() is hooked and returned array (outdated)
+		   			$hooked = $this->wire('hooks')->isHooked('TextformatterPageImages::wrapper()');
+		   			if ($hooked && is_array($this->wrapper($picture))) throw new WireException('Modul Version has changed. Expected string as return value of function wrapper(). Please update your hook.');
+
+	   				$replace = wirePopulateStringTags($this->wrapper($picture), $picture);
+	   				$str = str_replace($m[0], $replace, $str);
+		   		}
+		   	}
+		}
 	}
 
 	/**
@@ -101,11 +124,12 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$fields->add($f);
 
 		$f = wire('modules')->get('InputfieldText'); 
-		$f->attr('name', 'wrapper');
-		$f->label = __('Wrapper'); 
-		$f->description = __('Markup to wrap around the image tag. Use Asterisk as placeholder for the image tag. Function wrapper() is hookable. Argument is Instance of Pageimage. Return array([0] => before_image_tag, [1] => after_image_tag)'); 
-		$f->notes = __('Example: <div>*<hr/></div>'); 
-		$f->value = $data['wrapper'];
+		$f->attr('name', 'html');
+		$f->label = __('HTML'); 
+		$f->description = __('Custom Markup used for output.'); 
+		$f->notes = __('Any PageImage property surrounded by curled brackets will be replaced by the related value. Additional properties (class, index, urlSmall, urlMedium, urlLarge) available.');
+		$f->placeholder = '<img class="{class}" src="{url}" alt="{description}"/>';
+		$f->value = $data['html'];
 		$fields->add($f);
 
 		return $fields;
