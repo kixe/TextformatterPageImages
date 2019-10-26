@@ -21,9 +21,10 @@ Look at the Examples for easy understanding
 * One or more basic classes could be added to the image tag
 * Define custom markup for wrapper. Any PageImage property surrounded by curled brackets will be replaced by the related value. Additional properties (*class*, *index*, *urlSmall*, *urlMedium*, *urlLarge*) available. Default markup:  
 
-	```
+```
 <img class="{class}" src="{url}" alt="{description}"/>
-	```
+```
+
 ## Hooks
 function wrapper() is hookable with instance of <span style="color:blue;">Pageimage</span> as argument.
 
