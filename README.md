@@ -29,7 +29,7 @@ Look at the Examples for easy understanding
 function wrapper() is hookable with instance of <span style="color:blue;">Pageimage</span> as argument.
 
 ## Compatibility
-works proper together with other textformatters like markdown.
+Works well with other text formatters such as Markdown.
 
 ## Thanks
 to Diogo for the nice module TextformatterImageTags which is the mother of this module. 
