@@ -48,7 +48,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 
 	/**
 	 * hookable function returns output markup
-	 * @param Pageimage object with additional properties (iclass, index, urlSmall, urlMedium, urlLarge)
+	 * @param Pageimage object with additional properties (class, index, urlSmall, urlMedium, urlLarge)
 	 * @return string markup
 	 *
 	 */
