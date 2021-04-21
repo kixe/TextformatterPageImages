@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 1.1.1
+ * @version 1.1.2
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
  * @since 1.0.6 fixed issue with checking for array/ single-item 2016-12-07
@@ -22,6 +22,7 @@
  * @since 1.0.9 strip tags from $alt property if found in $description 2020-10-19
  * @since 1.1.0 added option to configure custom widths according to your breakpoints 2020-10-19
  * @since 1.1.1 allow @ in class string 2020-10-21
+ * @since 1.1.2 allow to include images from other pages, by providing page ID as 4th parameter 2021-04-21
  *
  */
 
@@ -30,9 +31,9 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 111, 
+			'version' => 112, 
 			'author' => 'kixe',
-			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class]]. All Parameters are optional. Configurable base class and wrapper."),
+			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class,page-ID]]. All Parameters are optional. Configurable base class and wrapper."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
 		); 
 	}
@@ -65,15 +66,22 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	}
 
 	public function formatValue(Page $page, Field $field, &$str) {
-		if(!$page->fields->get('type=FieldtypeImage')) return;
+		// if(!$page->fields->get('type=FieldtypeImage')) return;
 		if(strpos($str, '[[') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
-		if(preg_match_all("/\[\[([A-Za-z_]*)?(,)?([\d]*)?(,)?([\w@ _-]*)?\]\]/", $str, $a, PREG_SET_ORDER)) {
+		if(preg_match_all("/\[\[([A-Za-z_]*)?(,)?([\d]*)?(,)?([\w@ _-]*)?(,)?([\d]*)?\]\]/", $str, $a, PREG_SET_ORDER)) {
 			foreach($a as $m) {
-				$m = array_pad($m,6,null);
-		   		$f = $m[1]?$m[1]:$page->fields->get('type=FieldtypeImage')->name;
+				$m = array_pad($m,8,null);
+				if ($m[7]) {
+					$p = wire('pages')->get($m[7]);
+					if (!$p->id) continue;
+				} else {
+					$p = $page;
+				}
+				if(!$p->fields->get('type=FieldtypeImage')) return;
+		   		$f = $m[1]?$m[1]:$p->fields->get('type=FieldtypeImage')->name;
 		   		$picture = 0;
-		   		if ($page->$f instanceof Pageimages) $picture = $page->get($f)->eq($m[3]?$m[3]-1:0);
-		   		else if ($page->$f instanceof Pageimage) $picture = $page->get($f);
+		   		if ($p->$f instanceof Pageimages) $picture = $p->get($f)->eq($m[3]?$m[3]-1:0);
+		   		else if ($p->$f instanceof Pageimage) $picture = $p->get($f);
 		   		if (!$picture) {
 		   			// remove placeholder if picture doesn't exists
 		   			$str = str_replace($m[0], "", $str);

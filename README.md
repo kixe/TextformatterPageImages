@@ -2,7 +2,7 @@ Textformatter Page Images
 =========================
 
 ## Syntax
-* includes an image-tag in the Textfield by using [[fieldname(optional),number(optional),class(optional)]] 
+* includes an image-tag in the Textfield by using [[fieldname(optional),number(optional),class(optional),page-ID(optional)]] 
 * if using this module Names of Imagefields shouldn't start with a number
 * If a class (CSS) is added Fieldname and/or Number and/or leading Comma is mandatory
 * Comma is mandatory from two Parameters and up
