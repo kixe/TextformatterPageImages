@@ -16,6 +16,8 @@ Look at the Examples for easy understanding
 `[[3,left]]` matches the third picture in the first or only one image-field and adds the class left  
 `[[,right]]` matches the first or only one picture in the first or only one image-field and adds the class left  
 `[[images,3,top]]` matches the third picture in the image-field named 'images' and adds the class top  
+`[[,,,1234]]` matches the first or only one picture in the first or only one image-field of the page with ID = 1234    
+`[[images,3,top,1234]]` matches the third picture in the image-field named 'images' of the page with ID = 1234 and adds the class top  
 
 ## Settings
 * One or more basic classes could be added to the image tag
