@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 1.1.2
+ * @version 2.0.1
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
  * @since 1.0.6 fixed issue with checking for array/ single-item 2016-12-07
@@ -23,15 +23,19 @@
  * @since 1.1.0 added option to configure custom widths according to your breakpoints 2020-10-19
  * @since 1.1.1 allow @ in class string 2020-10-21
  * @since 1.1.2 allow to include images from other pages, by providing page ID as 4th parameter 2021-04-21
+ * @since 2.0.0 added support for extended Markdown syntax 2022-02-26
+ * @since 2.0.1 removed basic class in module settings as it could be added via markup 2022-02-26
  *
  */
 
 class TextformatterPageImages extends Textformatter implements ConfigurableModule {
 
+	const DEFAULT_MARKUP = '<img class="{class}" src="{url}" alt="{alt}"/>';
+
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 112, 
+			'version' => 201, 
 			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following format [[fieldName,Number,class,page-ID]]. All Parameters are optional. Configurable base class and wrapper."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
@@ -40,7 +44,6 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 
 	static public function getDefaultConfig() {
 		return array(
-			'class' => 'textformatter-page-images',
 			'html' => '',
 			'widthSmall' => 400,
 			'widthMedium' => 800,
@@ -61,26 +64,32 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	 *
 	 */
 	public function ___wrapper(Pageimage $picture) {
-		$html = $this->html? trim($this->html)."\n" : '<img class="{class}" src="{url}" alt="{description}"/>';
-		return $this->escapeP? "</p>$html<p>" : $html;
+		return $this->html? trim($this->html)."\n" : self::DEFAULT_MARKUP;
 	}
 
 	public function formatValue(Page $page, Field $field, &$str) {
-		// if(!$page->fields->get('type=FieldtypeImage')) return;
-		if(strpos($str, '[[') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
-		if(preg_match_all("/\[\[([A-Za-z_]*)?(,)?([\d]*)?(,)?([\w@ _-]*)?(,)?([\d]*)?\]\]/", $str, $a, PREG_SET_ORDER)) {
+		if(strpos($str, '[[') === false && strpos($str, '![') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
+
+		$pattern = "~(\!\[([^\]]*)?\]\((?!https?:\/\/|\/)([a-zA-Z]+[\w]*)?(,)?([\d]*)?(,)?(-?[_a-zA-Z]+[\w@ -]*)?(,)?([\d]*)?\))|(\[\[([^,\w\s@-])?([a-zA-Z]+[\w]*)?(,)?([\d]*)?(,)?(-?[_a-zA-Z]+[\w@ -]*)?(,)?([\d]*)?\]\])~";
+
+		if(preg_match_all($pattern, $str, $a, PREG_SET_ORDER)) {
 			foreach($a as $m) {
-				$m = array_pad($m,8,null);
-				if ($m[7]) {
-					$p = wire('pages')->get($m[7]);
+
+				if (!empty($m[10])) $m = array_slice($m, 10, 9);
+				else $m = array_slice($m, 1, 9);
+
+				if ($m[8]) {
+					$p = wire('pages')->get((int)$m[8]);
 					if (!$p->id) continue;
 				} else {
 					$p = $page;
 				}
+
 				if(!$p->fields->get('type=FieldtypeImage')) return;
-		   		$f = $m[1]?$m[1]:$p->fields->get('type=FieldtypeImage')->name;
+		   		$f = $m[2]?$m[2]:$p->fields->get('type=FieldtypeImage')->name;
 		   		$picture = 0;
-		   		if ($p->$f instanceof Pageimages) $picture = $p->get($f)->eq($m[3]?$m[3]-1:0);
+
+		   		if ($p->$f instanceof Pageimages) $picture = $p->get($f)->eq($m[4]?$m[4]-1:0);
 		   		else if ($p->$f instanceof Pageimage) $picture = $p->get($f);
 		   		if (!$picture) {
 		   			// remove placeholder if picture doesn't exists
@@ -88,10 +97,15 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		   			continue;
 		   		}
 		   		else {
-		   			$picture->set('index',$m[3]? $m[3]-1 : 0);
-		   			$class = $m[5]? $m[5] : '';
-		   			$picture->set('class', trim("$this->class $class"));
-		   			if (strlen($picture->description)) $picture->set('alt', strip_tags($picture->description));
+		   			$picture->set('index',$m[4]? $m[4]-1 : 0);
+		   			$class = $m[6]? $m[6] : '';
+		   			$picture->set('class', $class);
+
+		   			// is alt provided by extended Markdown syntax?
+		   			if ($m[1]) $picture->set('alt', $m[1]);
+
+					// does the field provide a description?
+		   			else if (empty($picture->alt) && strlen("$picture->description")) $picture->set('alt', strip_tags($picture->description));
 
 		   			if (!$picture->small || $picture->small instanceof Pageimage == false) {
 		   				$small = $picture->width($this->widthSmall);
@@ -114,6 +128,8 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		   			if ($hooked && is_array($this->wrapper($picture))) throw new WireException('Modul Version has changed. Expected string as return value of function wrapper(). Please update your hook.');
 
 	   				$replace = wirePopulateStringTags($this->wrapper($picture), $picture);
+	   				// remove spaces from class attribute
+	   				$replace = str_replace(['class=""',"class=''",'=" ',"=' "], ['','','="',"='"], $replace);
 	   				$str = str_replace($m[0], $replace, $str);
 		   		}
 		   	}
@@ -131,32 +147,13 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$data = array_merge($defaults, $data);
 
 		$f = wire('modules')->get('InputfieldText'); 
-		$f->attr('name', 'class');
-		$f->attr('pattern', '[A-Za-z0-9 _-]*');
-		$f->attr('title', 'Allowed types: A-Z, a-z, 0-9, dash and underscore');
-		$f->label = __('Basic Class (CSS)'); 
-		$f->description = __('This class is added to each image tag.'); 
-		$f->notes = __('Separate multiple classes by space'); 
-		$f->value = $data['class'];
-		$fields->add($f);
-
-		$f = wire('modules')->get('InputfieldText'); 
 		$f->attr('name', 'html');
 		$f->label = __('HTML'); 
 		$f->description = __('Custom Markup used for output.'); 
-		$f->notes = __("Any PageImage property surrounded by curled brackets will be replaced by the related value. Additional properties (class, index, urlSmall, urlMedium, urlLarge) are available. If the description property contains markup (e.g. applied via textformatter in the image field) use property alt for attribute 'alt' instead of property description");
-		$f->placeholder = '<img class="{class}" src="{url}" alt="{alt}"/>';
+		$f->notes = __("Any PageImage property surrounded by curled brackets will be replaced by the related value. Additional properties (class, index, urlSmall, urlMedium, urlLarge) are available. If the description property contains markup (e.g. applied via textformatter in the image field) use property alt for attribute 'alt' instead of property 'description'. The 'alt' property may be assigned via Markdown syntax or via hook to the PageImage instance. Otherwise, if set, description (markup stripped) will be used.");
+		$f->placeholder = self::DEFAULT_MARKUP;
 		$f->value = $data['html'];
 		$fields->add($f);
-
-		/*$f = wire('modules')->get('InputfieldCheckbox'); 
-		$f->attr('name', 'escapeP');
-		$f->label = __('Escape from <p> Tag');
-		$f->description = __('Check if you want to set a end p tag before and open p tag after the custom markup.');
-		$f->attr('value', 1); 
-		if($data['escapeP']) $f->attr('checked', 'checked');
-		$fields->add($f);
-		*/
 
 		$f = wire('modules')->get('InputfieldInteger'); 
 		$f->attr('name', 'widthSmall');
