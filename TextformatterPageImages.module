@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 2.0.7
+ * @version 2.0.8 2024-05-01
  * 
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
@@ -32,9 +32,11 @@
  * @since 2.0.5 added ProcessWire namespace 2023-08-02
  * @since 2.0.6 added hookable function to manipulate the page object where to retrieve the image from 2023-08-16
  * @since 2.0.7 added option to enable / disable removing placeholders if the image could not be found 2024-02-23
+ * @since 2.0.8 added function renderMarkup(), assignImageProperties() for better external usage 2024-05-01
  *
  */
 
+#[\AllowDynamicProperties]
 class TextformatterPageImages extends Textformatter implements ConfigurableModule {
 
 	const DEFAULT_MARKUP = '<img class="{class}" src="{url}" alt="{alt}"/>';
@@ -42,7 +44,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 207, 
+			'version' => 208, 
 			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following formats [[fieldName, number, class, page-ID]] or ![alt](fieldName, number, class, page-ID). All Parameters are optional. Configurable markup for output and responsive width settings. Output hookable."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
@@ -85,6 +87,36 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		return $this->html? trim($this->html)."\n" : self::DEFAULT_MARKUP;
 	}
 
+	public function assignImageProperties(Pageimage $picture, $properties = []) {
+		$defaultProperties = [
+			'index' => 0,
+			'class' => '',
+			'alt' => ''
+		];
+		$properties = array_merge($defaultProperties, $properties);		
+		// assign properties
+		foreach ($properties as $key => $value) {
+			$picture->set($key, $value);
+		}
+		if ($picture->description && !$picture->alt) $picture->set('alt', $picture->description);
+		$picture->alt = strip_tags($picture->alt);
+
+		// provide size variations
+		$small = $picture->width($this->widthSmall);
+		$picture->set('urlSmall', $small->url);
+		$picture->set('urlThumb', $small->url);
+		$medium = $picture->width($this->widthMedium);
+		$picture->set('urlMedium', $medium->url);
+		$large = $picture->width($this->widthLarge);
+		$picture->set('urlLarge', $large->url);
+	}
+
+	public function renderMarkup($picture) {
+		$replace = wirePopulateStringTags($this->wrapper($picture), $picture);
+	   	// remove empty classes and spaces from class attribute
+	   	return str_replace(['class=""',"class=''",'=" ',"=' "], ['','','="',"='"], $replace);
+	}
+
 	public function formatValue(Page $page, Field $field, &$str) {
 		if(strpos($str, '[[') === false && strpos($str, '![') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
 
@@ -116,45 +148,16 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		   			continue;
 		   		}
 		   		else {
-		   			$picture->set('index',$m[4]? $m[4]-1 : 0);
-		   			$class = $m[6]? $m[6] : '';
-		   			$picture->set('class', $class);
-
-		   			// apply textformatter in image field settings if needed for description
-
-		   			// does the field provide a description?
-		   			$picture->set('alt', $picture->description);
-
-		   			// is alt provided by extended Markdown syntax? Overwrite!
-		   			if ($m[1]) $picture->set('alt', $m[1]);
-
-		   			// always strip tags for alt
-		   			$picture->alt = strip_tags($picture->alt);
-
-		   			if (!$picture->small || $picture->small instanceof Pageimage == false) {
-		   				$small = $picture->width($this->widthSmall);
-		   				$picture->set('urlSmall', $small->url);
-		   				$picture->set('urlThumb', $small->url);
-		   			}
-
-		   			if (!$picture->medium || $picture->medium instanceof Pageimage == false) {
-		   				$medium = $picture->width($this->widthMedium);
-		   				$picture->set('urlMedium', $medium->url);
-		   			}
-
-		   			if (!$picture->large || $picture->large instanceof Pageimage == false) {
-		   				$large = $picture->width($this->widthLarge);
-		   				$picture->set('urlLarge', $large->url);
-		   			}
+		   			$properties = [];
+		   			$properties['index'] = $m[4]? $m[4]-1 : 0;
+		   			$properties['class'] = $m[6]? $m[6] : '';
+		   			$properties['alt'] = $m[1]? $m[1] : '';
+		   			$this->assignImageProperties($picture, $properties);
 
 		   			// error if wrapper() is hooked and returned array (outdated)
 		   			$hooked = $this->wire('hooks')->isHooked('TextformatterPageImages::wrapper()');
 		   			if ($hooked && is_array($this->wrapper($picture))) throw new WireException('Modul Version has changed. Expected string as return value of function wrapper(). Please update your hook.');
-	   			
-	   				$replace = wirePopulateStringTags($this->wrapper($picture), $picture);
-	   				// remove empty classes and spaces from class attribute
-	   				$replace = str_replace(['class=""',"class=''",'=" ',"=' "], ['','','="',"='"], $replace);
-	   				$str = str_replace($m[0], $replace, $str);
+	   				$str = str_replace($m[0], $this->renderMarkup($picture), $str);
 		   		}
 		   	}
 		}
