@@ -2,10 +2,10 @@ Textformatter Page Images
 ==========================
 
 ## Syntax
-* Include images in textfields by using the following tag syntax
-* **Classic**  `[[fieldname(optional),number(optional),class(optional),page-ID(optional)]]`
+* Include images stored site-wide and over multiple ProcessWire instances in textfields by using the following tag syntax:
+* **Classic**  `[[fieldname(optional),number(optional),class(optional),page-ID(optional),path-to-instance(optional)]]`
 * **Markdown**  
-  `![alt-Attribute(optional)](fieldname(optional),number(optional),class(optional),page-ID(optional))`
+  `![alt-Attribute(optional)](fieldname(optional),number(optional),class(optional),page-ID(optional),path-to-instance(optional))`
 * If a class (CSS) is added fieldname and/or number and/or leading comma is mandatory.
 * @ and spaces allowed in class names.
 * Comma is mandatory from two parameters and up.
@@ -20,6 +20,7 @@ Textformatter Page Images
 + `![](images,3,top)` or `[[images,3,top]]` matches the third picture in the image-field named 'images' and adds the class top.  
 + `![](,,,1234)` or `[[,,,1234]]` matches the first or only one picture in the first or only one image-field of the page with ID = 1234.
 + `![](images,3,top,1234)` or `[[images,3,top,1234]]` matches the third picture in the image-field named 'images' of the page with ID = 1234 and adds the class top.
++ `![](images,3,top,1234,site-foo)` or `[[images,3,top,1234,site-foo]]` matches the third picture in the image-field named 'images' of the page with ID = 1234 of the ProcessWire instance living under the path '/site-foo/' adds the class 'top' and overwrites alt-Attribute with 'Hello World'.
 + `![Hello World](images,3,top,1234)`matches the third picture in the image-field named 'images' of the page with ID = 1234 adds the class 'top' and overwrites alt-Attribute with 'Hello World'.
 
 ## Module settings
@@ -60,6 +61,19 @@ Works well with other text formatters such as Markdown. Place this textformatter
 Conflicts with markdown prevented by checking against the presence of ***negation indicator*** in the 1st parameter:
 + `https://`, `http://` or `/`
 + `.` (dot) which determines file extension (.png, .jpg)
+
+
+## External Usage example
+Useful to stay consistent with the markup stored in modules setup.
+
+```
+if ($page->image instanceof PageImage) {
+    $class = "uk-width-1-2@l uk-width-1-2@m";
+    $TPI = $modules->get('TextformatterPageImages');
+    $TPI->assignImageProperties($page->image, ['class' => $class]);
+    $page->_imageMarkupString = $TPI->renderMarkup($page->image);
+}
+```
 
 ## Limitations
 
