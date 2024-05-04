@@ -136,7 +136,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 				if (!empty($m[10])) {
 					if (wire('config')->urls->site != "/$m[10]/") {	
 						// already loaded?
-						foreach (wire()::getInstances() as $id => $pwi) {
+						foreach (ProcessWire::getInstances() as $id => $pwi) {
 							if ("/$m[10]/" == $pwi->config->urls->site) {
 								$instance = $pwi;
 								break;
