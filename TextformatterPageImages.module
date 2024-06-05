@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 2.0.9 2024-05-04
+ * @version 2.1.0 2024-06-05
  * 
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
@@ -34,6 +34,8 @@
  * @since 2.0.7 added option to enable / disable removing placeholders if the image could not be found 2024-02-23
  * @since 2.0.8 added function renderMarkup(), assignImageProperties() for better external usage 2024-05-01
  * @since 2.0.9 multi instance support 2024-05-01
+ * @since 2.1.0 remove empty tags and attributes (title, class) from markup 2024-06-05
+ * 
  */
 
 #[\AllowDynamicProperties]
@@ -44,7 +46,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 209, 
+			'version' => 210, 
 			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following formats [[fieldName, number, class, page-ID]] or ![alt](fieldName, number, class, page-ID, instance). All Parameters are optional. Configurable markup for output and responsive width settings. Output hookable."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages'
@@ -112,9 +114,14 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	}
 
 	public function renderMarkup($picture) {
-		$replace = wirePopulateStringTags($this->wrapper($picture), $picture);
-	   	// remove empty classes and spaces from class attribute
-	   	return str_replace(['class=""',"class=''",'=" ',"=' "], ['','','="',"='"], $replace);
+		$replace = wirePopulateStringTags($this->wrapper($picture), $picture);  	
+	   	$regex = [
+	   		// remove empty tags / standalone copyright sign, pipe symbol, comma
+	   		'/<((?!iframe|canvas)\w+)[^>]*>(?>[\p{Z}\p{C}]|<br\b[^>]*>|&(?:(?:nb|thin|zwnb|e[nm])sp|zwnj|#xfeff|#xa0|#160|#65279);|(?R)|[©|\/,]+)*<\/\1>/',
+	   		// remove empty title or class attributes
+	   		'/\s*?(class|title)=(\'|")\s*?(\'|")/'
+	   	];
+	   	return preg_replace($regex, '', $replace);
 	}
 
 	public function formatValue(Page $page, Field $field, &$str) {
