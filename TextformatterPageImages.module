@@ -117,9 +117,9 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$replace = wirePopulateStringTags($this->wrapper($picture), $picture);  	
 	   	$regex = [
 	   		// remove empty tags / standalone copyright sign, pipe symbol, comma
-	   		'/<((?!iframe|canvas)\w+)[^>]*>(?>[\p{Z}\p{C}]|<br\b[^>]*>|&(?:(?:nb|thin|zwnb|e[nm])sp|zwnj|#xfeff|#xa0|#160|#65279);|(?R)|[©|\/,]+)*<\/\1>/',
+	   		'/<((?!iframe|canvas)\w+)[^>]*>(?>[\p{Z}\p{C}]|<br\b[^>]*>|&(?:(?:nb|thin|zwnb|e[nm])sp|zwnj|copy|#xfeff|#xa0|#160|#65279);|(?R)|[©|\/,]+)*<\/\1>/',
 	   		// remove empty title or class attributes
-	   		'/\s*?(class|title)=(\'|")\s*?(\'|")/'
+	   		'/\s*?(class|title)=(\'\s*?\'|"\s*?")/'
 	   	];
 	   	return preg_replace($regex, '', $replace);
 	}
