@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 2.1.0 2024-06-05
+ * @version 2.1.1 2025-05-02
  * 
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
@@ -35,6 +35,7 @@
  * @since 2.0.8 added function renderMarkup(), assignImageProperties() for better external usage 2024-05-01
  * @since 2.0.9 multi instance support 2024-05-01
  * @since 2.1.0 remove empty tags and attributes (title, class) from markup 2024-06-05
+ * @since 2.1.1 fixed bug: strpos(): Passing null to parameter #1 ($haystack) of type string is deprecated 2025-05-02
  * 
  */
 
@@ -46,10 +47,11 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 210, 
+			'version' => 211, 
 			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following formats [[fieldName, number, class, page-ID]] or ![alt](fieldName, number, class, page-ID, instance). All Parameters are optional. Configurable markup for output and responsive width settings. Output hookable."),
-			'href' => 'https://github.com/kixe/TextformatterPageImages'
+			'href' => 'https://github.com/kixe/TextformatterPageImages',
+			'requires' => "PHP>=8.0"
 		); 
 	}
 
@@ -118,7 +120,13 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	 *
 	 */
 	public function renderMarkup($picture) {
-		$replace = wirePopulateStringTags($this->wrapper($picture), $picture); 
+		// removeNullTags = true (default) e.g. <a{link}> => <a>
+		$replace = wirePopulateStringTags($this->wrapper($picture), $picture);
+		// remove empty link wrapper, <a> tag if not needed or filled with replacement (PHP>=8.0)
+		// TODO search for 1st occurence of an empty <a> tag remove RELATED closing tag
+		if (str_starts_with($replace,'<a>') && str_ends_with($replace,'</a>')) {
+			$replace = substr($replace, 3, -4);
+		}
 	   	$regex = [
 	   		// remove empty tags / standalone copyright sign, pipe symbol, comma
 	   		'/<((?!iframe|canvas)\w+)[^>]*>(?>[\p{Z}\p{C}]|<br\b[^>]*>|&(?:(?:nb|thin|zwnb|e[nm])sp|zwnj|copy|#xfeff|#xa0|#160|#65279);|(?R)|[©|\/,]+)*<\/\1>/',
@@ -129,9 +137,10 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	}
 
 	public function formatValue(Page $page, Field $field, &$str) {
+		if(empty($str)) return;
 		if(strpos($str, '[[') === false && strpos($str, '![') === false) return; // check if we even need to perform a preg_match and exit if not (added by Ryan)
 
-		$pattern = "~(\!\[([^\]]*)?\]\((?!https?:\/\/|\/)([a-zA-Z]+[\w]*)?(,)?([\d]*)?(,)?(-?[_a-zA-Z]+[\w@ -]*)?(,)?([\d]*)?(,)?(site|site-[a-z]+)?\))|(\[\[([^,\w\s@-])?([a-zA-Z]+[\w]*)?(,)?([\d]*)?(,)?(-?[_a-zA-Z]+[\w@ -]*)?(,)?([\d]*)?(,)?(site|site-[a-z]+)?\]\])~";
+		$pattern = "~(\!\[([^\]]*)?\]\((?!https?:\/\/|\/)([a-zA-Z]+[\w]*)?(,)?([\d]*)?(,)?(-?[_a-zA-Z]+[\w@ -]*)?(,)?([\d]*)?(,)?(site|site-[a-z]+)?\))|(\[\[([^,\w\s@-])?([a-zA-Z]+[\w]*)?(,)?([\d]*)?(,)?(-?[_a-zA-Z-]+[\w@ -]*)?(,)?([\d]*)?(,)?(site|site-[a-z]+)?\]\])~";
 
 
 		if(preg_match_all($pattern, $str, $a, PREG_SET_ORDER)) {
