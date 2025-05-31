@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 2.1.1 2025-05-02
+ * @version 2.1.2 2025-05-22
  * 
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
@@ -36,6 +36,7 @@
  * @since 2.0.9 multi instance support 2024-05-01
  * @since 2.1.0 remove empty tags and attributes (title, class) from markup 2024-06-05
  * @since 2.1.1 fixed bug: strpos(): Passing null to parameter #1 ($haystack) of type string is deprecated 2025-05-02
+ * @since 2.1.2 added properties width and size to PageImage related to size variations 2025-05-22
  * 
  */
 
@@ -47,7 +48,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 211, 
+			'version' => 212, 
 			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following formats [[fieldName, number, class, page-ID]] or ![alt](fieldName, number, class, page-ID, instance). All Parameters are optional. Configurable markup for output and responsive width settings. Output hookable."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages',
@@ -58,6 +59,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	static public function getDefaultConfig() {
 		return array(
 			'html' => '',
+			'widthThumb' => 300,
 			'widthSmall' => 400,
 			'widthMedium' => 800,
 			'widthLarge' => 1200,
@@ -106,13 +108,18 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$picture->alt = strip_tags($picture->alt);
 
 		// provide size variations
-		$small = $picture->width($this->widthSmall);
-		$picture->set('urlSmall', $small->url);
-		$picture->set('urlThumb', $small->url);
-		$medium = $picture->width($this->widthMedium);
-		$picture->set('urlMedium', $medium->url);
-		$large = $picture->width($this->widthLarge);
-		$picture->set('urlLarge', $large->url);
+		$widths = [
+			'Thumb' => $this->widthThumb,
+			'Small' => $this->widthSmall,
+			'Medium' => $this->widthMedium,
+			'Large' => $this->widthLarge
+		];
+		foreach ($widths as $k => $width) {
+			$resized = $picture->width($width);
+			$picture->set("url$k", $resized->url);
+			$picture->set("width$k", $resized->width);
+			$picture->set("height$k", $resized->height);
+		}
 	}
 
 	/**
@@ -223,7 +230,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$f->attr('name', 'html');
 		$f->label = __('HTML'); 
 		$f->description = __("Custom Markup used for output. Any `PageImage` property surrounded by curled brackets will be replaced by the related value. If the description property contains markup (e.g. applied via textformatter of the image field) use property `\$alt` for attribute 'alt' instead of property `\$description` to get same content with stripped tags. Alternatively different content for the 'alt' attribute may be applied via Markdown syntax or via hook in to the PageImage instance.");
-		$f->notes = __("Additional PageImage properties: `\$class`, `\$index`, `\$urlSmall`, `\$urlMedium`, `\$urlLarge`.");
+		$f->notes = __("Additional PageImage properties: `\$class`, `\$index`, `\$urlSmall`, `\$urlMedium`, `\$urlLarge`, `\$widthSmall`, `\$widthMedium`, `\$widthLarge`, `\$heightSmall`, `\$heightMedium`, `\$heightLarge`.");
 		$f->placeholder = self::DEFAULT_MARKUP;
 		$f->value = $data['html'];
 		$fields->add($f);
