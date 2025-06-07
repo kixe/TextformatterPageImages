@@ -13,7 +13,7 @@
  * 
  * http://processwire.com
  *
- * @version 2.1.2 2025-05-22
+ * @version 2.1.4 2025-06-07
  * 
  * @since 1.0.2 basic class and wrapper configuration added 2015-09-03
  * @since 1.0.3 hookable function wrapper() added 2015-10-24
@@ -36,7 +36,9 @@
  * @since 2.0.9 multi instance support 2024-05-01
  * @since 2.1.0 remove empty tags and attributes (title, class) from markup 2024-06-05
  * @since 2.1.1 fixed bug: strpos(): Passing null to parameter #1 ($haystack) of type string is deprecated 2025-05-02
- * @since 2.1.2 added properties width and size to PageImage related to size variations 2025-05-22
+ * @since 2.1.2 added properties width and height to PageImage related to size variations 2025-05-22
+ * @since 2.1.3 resize image only if different from original 2025-06-07
+ * @since 2.1.4 added support for WebP url properties 2025-06-07
  * 
  */
 
@@ -48,11 +50,11 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'Textformatter Page Images', 
-			'version' => 212, 
+			'version' => 214, 
 			'author' => 'kixe',
 			'summary' => __("Allows you to insert images in a text area by referencing them with tags in the following formats [[fieldName, number, class, page-ID]] or ![alt](fieldName, number, class, page-ID, instance). All Parameters are optional. Configurable markup for output and responsive width settings. Output hookable."),
 			'href' => 'https://github.com/kixe/TextformatterPageImages',
-			'requires' => "PHP>=8.0"
+			'requires' => "PHP>=8.0,ProcessWire>=3.0.132"
 		); 
 	}
 
@@ -115,10 +117,15 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 			'Large' => $this->widthLarge
 		];
 		foreach ($widths as $k => $width) {
-			$resized = $picture->width($width);
+			// resize only if needed
+			if ($picture->width == $width) $resized = $picture;
+			else $resized = $picture->width($width);
 			$picture->set("url$k", $resized->url);
 			$picture->set("width$k", $resized->width);
 			$picture->set("height$k", $resized->height);
+			if ($picture->hasWebp) {
+				$picture->set("webpUrl$k", $resized->webp()->url());
+			}
 		}
 	}
 
@@ -230,7 +237,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$f->attr('name', 'html');
 		$f->label = __('HTML'); 
 		$f->description = __("Custom Markup used for output. Any `PageImage` property surrounded by curled brackets will be replaced by the related value. If the description property contains markup (e.g. applied via textformatter of the image field) use property `\$alt` for attribute 'alt' instead of property `\$description` to get same content with stripped tags. Alternatively different content for the 'alt' attribute may be applied via Markdown syntax or via hook in to the PageImage instance.");
-		$f->notes = __("Additional PageImage properties: `\$class`, `\$index`, `\$urlSmall`, `\$urlMedium`, `\$urlLarge`, `\$widthSmall`, `\$widthMedium`, `\$widthLarge`, `\$heightSmall`, `\$heightMedium`, `\$heightLarge`.");
+		$f->notes = __("Additional PageImage properties: `\$class`, `\$index`, `\$urlSmall`, `\$urlMedium`, `\$urlLarge`, `\$widthSmall`, `\$widthMedium`, `\$widthLarge`, `\$heightSmall`, `\$heightMedium`, `\$heightLarge`, `\$webpUrlSmall`, `\$webpUrlMedium`, `\$webpUrlLarge` (the last 3 available only if WebP is enabled).");
 		$f->placeholder = self::DEFAULT_MARKUP;
 		$f->value = $data['html'];
 		$fields->add($f);
@@ -247,21 +254,21 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 		$f = wire('modules')->get('InputfieldInteger'); 
 		$f->attr('name', 'widthSmall');
 		$f->columnWidth = 33;
-		$f->label = __('Width set to property $urlSmall'); 
+		$f->label = __('Width set to property $urlSmall and $webpUrlSmall (if WebP enabled)'); 
 		$f->value = $data['widthSmall'];
 		$fields->add($f);
 
 		$f = wire('modules')->get('InputfieldInteger'); 
 		$f->attr('name', 'widthMedium');
 		$f->columnWidth = 34;
-		$f->label = __('Width set to property $urlMedium'); 
+		$f->label = __('Width set to property $urlMedium and $webpUrlMedium (if WebP enabled)'); 
 		$f->value = $data['widthMedium'];
 		$fields->add($f);
 
 		$f = wire('modules')->get('InputfieldInteger'); 
 		$f->attr('name', 'widthLarge');
 		$f->columnWidth = 33;
-		$f->label = __('Width set to property $urlLarge'); 
+		$f->label = __('Width set to property $urlLarge and $webpUrlLarge  (if WebP enabled)'); 
 		$f->value = $data['widthLarge'];
 		$fields->add($f);
 
