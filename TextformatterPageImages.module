@@ -121,7 +121,7 @@ class TextformatterPageImages extends Textformatter implements ConfigurableModul
 			if ($picture->width == $width) $resized = $picture;
 			else $resized = $picture->width($width);
 			$picture->set("url$k", $resized->url);
-			$picture->set("width$k", $resized->width);
+			$picture->set("width$k", $width);
 			$picture->set("height$k", $resized->height);
 			if ($picture->hasWebp) {
 				$picture->set("webpUrl$k", $resized->webp()->url());
