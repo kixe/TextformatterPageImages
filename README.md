@@ -40,18 +40,30 @@ Use placeholders surrounded by curled brackets to assign **PageImage** propertie
 + *class*
 + *alt* (if set, or *description* as fallback is set)
 
+### Properties for size and type variations
+URLs and dimensions of variations are created automatically by the module accessible as additional **PageImage** properties:
 
-### Size Variations
-URLs of variations to be accessed via additional **PageImage** properties:
+|Property|Value|Type|
+|:-|:-|-:|
+|widthThumb|300px|INT|
+|widthSmall|400px|INT|
+|widthMedium|800px|INT|
+|widthLarge|1200px|INT|
+|heightThumb|calculated|INT|
+|heightSmall|calculated|INT|
+|heightMedium|calculated|INT|
+|heightLarge|calculated|INT|
+|urlThumb|`/site/assets/files/1234/example.300x0.png`|URL|
+|urlSmall| `/site/assets/files/1234/example.400x0.png`|URL|
+|urlMedium| `/site/assets/files/1234/example.800x0.png`|URL|
+|urlLarge| `/site/assets/files/1234/example.1200x0.png`|URL|
+|webpUrl|`/site/assets/files/1234/example.webp`|URL|
+|webpUrlThumb|`/site/assets/files/1234/example.300x0.webp`|URL|
+|webpUrlSmall|`/site/assets/files/1234/example.400x0.webp`|URL|
+|webpUrlMedium|`/site/assets/files/1234/example.800x0.webp`|URL| 
+|webpUrlLarge|`/site/assets/files/1234/example.1200x0.webp`|URL|
 
-|VARIATION|small|medium|large|
-|:-|:-|:-|:-|
-|**width**|400|800|1200|
-|**property (URL)**|*urlSmall*|*urlMedium*|*urlLarge*|
-
-
-To use **PageImage** property surrounded by curled brackets will be replaced by the related value. Additional properties (*class*, *index*, *urlSmall*‌, *urlThumb* [alias of *urlSmall*], *urlMedium*, *urlLarge*) available.
-
+To use **PageImage** property surrounded by curled brackets will be replaced by the related value. Additional properties (*class*, *index*, *alt*‌) available.
 
 ## Hooks
 Function `wrapper()` is hookable with instance of **PageImage** as argument.
@@ -61,6 +73,14 @@ Works well with other text formatters such as Markdown. Place this textformatter
 Conflicts with markdown prevented by checking against the presence of ***negation indicator*** in the 1st parameter:
 + `https://`, `http://` or `/`
 + `.` (dot) which determines file extension (.png, .jpg)
+
+## Example for a complex Markup
+This responsive example provides WebP URLs with fallbacks to standard URLs (e.g. SVG images), it contains a property ‘_link’ which is assigned via hook to optionally wrap the image with a link (e.g. video), as well as some custom image fields (image_caption, image_license, image_creator).
+
+```
+<figure class="{class}"><div><a{_link}><img alt="{image_alt}" loading="lazy" src="{webpUrlThumb|urlThumb}" srcset="{webpUrlSmall|urlSmall} 400w, {webpUrlMedium|urlMedium} 800w, {webpUrlLarge|urlLarge} 1200w, {webpUrl}|url {width}w" width="{width}" height="{height}" sizes="(min-width: 301px) 400px, (min-width: 401px) 800px, (min-width: 801px) 1200px, (min-width: 1201px) {width}px, 300px"></a><footer><small>&copy; {image_creator}</small> <small>| {image_license}</small></footer></div><figcaption>{image_caption}</figcaption></figure>
+```
+
 
 
 ## External Usage example
